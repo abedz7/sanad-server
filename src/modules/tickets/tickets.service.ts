@@ -102,6 +102,8 @@ export const ticketsService = {
       ticket.description = patch.description;
     }
     if (Object.keys(changes).length > 0) {
+      // Contract 1.2.0 §5: every mutation bumps lastActivityAt.
+      ticket.lastActivityAt = new Date();
       await ticketsRepository.save(ticket);
       await appendEvent(
         { ticketId: id, actorId: caller.id, type: 'updated', changes },
@@ -207,6 +209,8 @@ export const ticketsService = {
     }
 
     if (events.length > 0) {
+      // Contract 1.2.0 §5: every mutation bumps lastActivityAt.
+      ticket.lastActivityAt = new Date();
       await ticketsRepository.save(ticket);
       for (const event of events) await appendEvent(event, caller.requestId);
     }

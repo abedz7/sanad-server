@@ -1,0 +1,9 @@
+node_modules
+dist
+coverage
+storage
+package-lock.json
+# Owned by the lead; formatting them here would create noisy diffs in the contract.
+CLAUDE.md
+docs/API.md
+docs/PLAN.md

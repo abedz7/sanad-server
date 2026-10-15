@@ -1,8 +1,22 @@
-import type { RequestHandler } from 'express';
+import type { Request, RequestHandler } from 'express';
 import { AppError } from '../lib/errors.js';
 import { tokenService } from '../modules/auth/token.service.js';
 import { userRepository } from '../modules/users/user.repository.js';
 import type { Role } from '../modules/users/user.model.js';
+
+// What a controller needs to hand to a service: who is acting, and the request id so a service can
+// log failures (e.g. a history append) with correlation. requireAuth guarantees req.user; the throw
+// is a fail-closed guard against a route wired without it.
+export interface Caller {
+  id: string;
+  role: Role;
+  requestId: string;
+}
+
+export function callerOf(req: Request): Caller {
+  if (!req.user) throw new AppError('AUTH_REQUIRED');
+  return { id: req.user.id, role: req.user.role, requestId: req.requestId };
+}
 
 const BEARER = /^Bearer\s+(\S+)$/i;
 

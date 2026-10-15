@@ -136,15 +136,16 @@ export const authService = {
     return issueSession(user, stored.client, stored.familyId, ctx);
   },
 
-  // Idempotent: unknown, expired or already-revoked tokens are not an error. The family is revoked
-  // only when the token belongs to the caller, so a token guessed or stolen from another account
-  // cannot be used to sign that account out.
-  async logout(presented: string | undefined, callerId: string): Promise<void> {
+  // Possession of the refresh token is the credential (docs/API.md 1.1.0 §7.1): the presented
+  // token's whole family is revoked without requiring a live access token. Idempotent: a missing,
+  // unknown, expired or already-revoked token is not an error, so the response never confirms
+  // whether a guessed token existed.
+  async logout(presented: string | undefined): Promise<void> {
     if (!presented) return;
     const stored = await refreshTokenRepository.findByHash(
       tokenService.hashRefreshToken(presented),
     );
-    if (stored?.userId.toString() !== callerId) return;
+    if (!stored) return;
     await refreshTokenRepository.revokeFamily(stored.familyId);
   },
 

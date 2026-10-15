@@ -106,7 +106,7 @@ describe('POST /api/v1/auth/login', () => {
     expect(res.status).toBe(200);
   });
 
-  it('marks auth responses Cache-Control: no-store', async () => {
+  it('marks every auth response Cache-Control: no-store, including failures', async () => {
     const user = await createUser();
     const admin = await createUser({ role: 'admin' });
 
@@ -115,5 +115,10 @@ describe('POST /api/v1/auth/login', () => {
 
     const web = await login(admin.email, admin.password, 'web');
     expect(web.get('Cache-Control')).toBe('no-store');
+
+    // Contract 1.1.0 §8: every /auth/* response, success or error.
+    const failed = await login(user.email, 'definitely-wrong-pass', 'mobile');
+    expect(failed.status).toBe(401);
+    expect(failed.get('Cache-Control')).toBe('no-store');
   });
 });

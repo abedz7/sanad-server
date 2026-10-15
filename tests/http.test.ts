@@ -1,6 +1,8 @@
+import mongoose from 'mongoose';
 import request from 'supertest';
 import { describe, expect, it } from 'vitest';
-import { app, body, type Envelope, type ErrorEnvelope } from './setup.js';
+import { connectDb } from '../src/db.js';
+import { app, body, mongoUri, type Envelope, type ErrorEnvelope } from './setup.js';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -53,6 +55,18 @@ describe('HTTP hardening and envelope', () => {
     expect(data.db).toBe('connected');
     expect(data.status).toBe('ok');
     expect(typeof data.uptime).toBe('number');
+  });
+
+  it('GET /health reports degraded with 503 while the database is down', async () => {
+    await mongoose.disconnect();
+    try {
+      const res = await request(app).get('/health');
+      expect(res.status).toBe(503);
+      const { data } = body<Envelope<{ status: string; db: string }>>(res);
+      expect(data).toMatchObject({ status: 'degraded', db: 'disconnected' });
+    } finally {
+      await connectDb(mongoUri());
+    }
   });
 
   it('CORS: an allowlisted origin is reflected with credentials', async () => {

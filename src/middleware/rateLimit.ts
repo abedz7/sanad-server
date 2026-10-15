@@ -17,7 +17,11 @@ const common: Partial<Options> = {
 // docs/API.md §3.2
 export const globalLimiter = rateLimit({ ...common, limit: 300 });
 
-export const authLimiter = rateLimit({ ...common, limit: 10 });
+// One shared counter for login + register (credential guessing), a separate, looser one for
+// refresh + logout (a foregrounded app refreshes often; the refresh token itself is the credential).
+export const loginRegisterLimiter = rateLimit({ ...common, limit: 10 });
+
+export const refreshLogoutLimiter = rateLimit({ ...common, limit: 60 });
 
 // Keyed on the authenticated user so one abusive account cannot hide behind a shared NAT, and so a
 // NAT full of honest users is not punished for one of them. Falls back to IP before auth resolves.

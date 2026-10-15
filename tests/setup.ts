@@ -11,7 +11,11 @@ import { afterAll, beforeAll, beforeEach } from 'vitest';
 import { createApp } from '../src/app.js';
 import { env } from '../src/config/env.js';
 import { connectDb, disconnectDb } from '../src/db.js';
-import { authLimiter, globalLimiter } from '../src/middleware/rateLimit.js';
+import {
+  globalLimiter,
+  loginRegisterLimiter,
+  refreshLogoutLimiter,
+} from '../src/middleware/rateLimit.js';
 import { passwordService } from '../src/modules/auth/password.service.js';
 import type { Client } from '../src/modules/auth/refresh-token.model.js';
 import type { Role } from '../src/modules/users/user.model.js';
@@ -22,12 +26,19 @@ export const app: Express = createApp();
 // ---- lifecycle ---------------------------------------------------------------------------------
 
 let mongod: MongoMemoryServer;
+let uri = '';
 
 beforeAll(async () => {
   mongod = await MongoMemoryServer.create();
+  uri = mongod.getUri('sanad-test');
   // connectDb also builds all model indexes, so tests exercising the unique email index cannot race it.
-  await connectDb(mongod.getUri('sanad-test'));
+  await connectDb(uri);
 });
+
+// For tests that disconnect and must reconnect (e.g. health 503).
+export function mongoUri(): string {
+  return uri;
+}
 
 afterAll(async () => {
   await disconnectDb();
@@ -46,7 +57,8 @@ beforeEach(async () => {
   await Promise.all(Object.values(mongoose.connection.models).map((model) => model.deleteMany({})));
   for (const key of RATE_LIMIT_KEYS) {
     globalLimiter.resetKey(key);
-    authLimiter.resetKey(key);
+    loginRegisterLimiter.resetKey(key);
+    refreshLogoutLimiter.resetKey(key);
   }
 });
 

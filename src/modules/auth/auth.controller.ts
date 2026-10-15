@@ -21,8 +21,8 @@ function contextOf(req: Request): RequestContext {
 }
 
 // docs/API.md §7.1: web gets the refresh token only as a cookie, mobile only in the body.
+// (Cache-Control: no-store is set router-wide in auth.routes.ts so error responses carry it too.)
 function respond(res: Response, result: AuthResult, status: number): void {
-  res.setHeader('Cache-Control', 'no-store');
   if (result.client === 'web') {
     res.cookie(REFRESH_COOKIE, result.refreshToken, {
       ...cookieOptions,
@@ -68,8 +68,7 @@ export const authController = {
 
   logout: (async (req, res) => {
     const { body } = validated(req, logoutSchema);
-    // requireAuth guarantees req.user here.
-    await authService.logout(presentedRefreshToken(req, body), req.user?.id ?? '');
+    await authService.logout(presentedRefreshToken(req, body));
     res.clearCookie(REFRESH_COOKIE, cookieOptions);
     res.status(204).end();
   }) satisfies RequestHandler,

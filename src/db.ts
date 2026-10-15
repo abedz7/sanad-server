@@ -15,6 +15,15 @@ export async function connectDb(uri: string = env.MONGODB_URI): Promise<void> {
     socketTimeoutMS: 45_000,
     maxPoolSize: 10,
   });
+  // Index builds must be explicit here: models are compiled at import time, before this connect,
+  // and Mongoose runs `Model.init()` during compilation. With `bufferCommands: false` that init
+  // fails instantly (no connection yet) and its rejection is cached on the model, so Mongoose's
+  // automatic index build on connect silently does nothing. Without this line a fresh database gets
+  // no unique index on users.email (duplicate registrations would succeed) and no TTL index on
+  // refresh_tokens. Failing loudly at boot is intended — running without these indexes is unsafe.
+  await Promise.all(
+    Object.values(mongoose.connection.models).map((model) => model.createIndexes()),
+  );
   logger.info('mongodb connected');
 }
 

@@ -1,4 +1,5 @@
 import type { ErrorRequestHandler } from 'express';
+import { MulterError } from 'multer';
 import { ZodError } from 'zod';
 import { AppError, type ErrorCode, type ErrorDetail } from '../lib/errors.js';
 import { logger } from '../lib/logger.js';
@@ -9,6 +10,15 @@ interface ErrorBody {
 
 function toAppError(err: unknown): AppError {
   if (err instanceof AppError) return err;
+  // docs/API.md §2 UPLOAD_REJECTED: 413 for size, 400 for a malformed multipart shape
+  // (extra files, wrong field name); type checks (415) are raised by the attachments service.
+  if (err instanceof MulterError) {
+    const tooLarge = err.code === 'LIMIT_FILE_SIZE';
+    return new AppError('UPLOAD_REJECTED', {
+      status: tooLarge ? 413 : 400,
+      details: [{ path: 'file', message: tooLarge ? 'File exceeds the size limit' : err.message }],
+    });
+  }
   if (err instanceof ZodError) {
     return new AppError('VALIDATION_FAILED', {
       details: err.issues.map((issue) => ({

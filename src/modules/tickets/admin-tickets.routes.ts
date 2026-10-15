@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
+import { attachmentsAdminRouter } from '../attachments/attachments.routes.js';
 import { commentsAdminRouter } from '../comments/comments.routes.js';
 import { historyAdminRouter } from '../history/history.routes.js';
 import { adminTicketsController } from './tickets.controller.js';
@@ -23,3 +24,4 @@ adminTicketsRouter.post(
 );
 adminTicketsRouter.use('/:id/history', historyAdminRouter);
 adminTicketsRouter.use('/:id/comments', commentsAdminRouter);
+adminTicketsRouter.use('/:id/attachments', attachmentsAdminRouter);

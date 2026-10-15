@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
+import { commentsOwnerRouter } from '../comments/comments.routes.js';
 import { historyOwnerRouter } from '../history/history.routes.js';
 import { ticketsController } from './tickets.controller.js';
 import {
@@ -20,3 +21,4 @@ ticketsRouter.get('/:id', validate(ticketIdParams), ticketsController.get);
 ticketsRouter.patch('/:id', validate(updateTicketSchema), ticketsController.update);
 ticketsRouter.post('/:id/status', validate(changeStatusSchema), ticketsController.changeStatus);
 ticketsRouter.use('/:id/history', historyOwnerRouter);
+ticketsRouter.use('/:id/comments', commentsOwnerRouter);

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { validate } from '../../middleware/validate.js';
+import { commentsAdminRouter } from '../comments/comments.routes.js';
 import { historyAdminRouter } from '../history/history.routes.js';
 import { adminTicketsController } from './tickets.controller.js';
 import {
@@ -21,3 +22,4 @@ adminTicketsRouter.post(
   adminTicketsController.changeStatus,
 );
 adminTicketsRouter.use('/:id/history', historyAdminRouter);
+adminTicketsRouter.use('/:id/comments', commentsAdminRouter);

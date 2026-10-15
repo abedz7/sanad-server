@@ -4,6 +4,7 @@ import { mutatingLimiter } from '../middleware/rateLimit.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { adminCategoriesRouter } from '../modules/categories/admin-categories.routes.js';
 import { categoriesRouter } from '../modules/categories/categories.routes.js';
+import { statsRouter } from '../modules/stats/stats.routes.js';
 import { adminTicketsRouter } from '../modules/tickets/admin-tickets.routes.js';
 import { ticketsRouter } from '../modules/tickets/ticket.routes.js';
 import { adminUsersRouter } from '../modules/users/admin-users.routes.js';
@@ -22,5 +23,6 @@ adminRouter.use(requireAuth, requireRole('admin'), mutatingLimiter);
 adminRouter.use('/users', adminUsersRouter);
 adminRouter.use('/categories', adminCategoriesRouter);
 adminRouter.use('/tickets', adminTicketsRouter);
+adminRouter.use('/stats', statsRouter);
 
 apiRouter.use('/admin', adminRouter);

@@ -154,9 +154,7 @@ describe('cross-cutting security invariants', () => {
       'x..y.png',
     ]) {
       await expect(storage.getStream(hostile)).rejects.toThrow('invalid storage key');
-      await expect(storage.put(hostile, Buffer.from('x'), 'image/png')).rejects.toThrow(
-        'invalid storage key',
-      );
+      await expect(storage.put(hostile, Buffer.from('x'))).rejects.toThrow('invalid storage key');
     }
   });
 

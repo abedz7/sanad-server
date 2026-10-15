@@ -6,9 +6,10 @@ Mongoose 8 · MongoDB 7.
 This repository owns the API contract. The admin dashboard (`sanad-admin`) and the mobile app
 (`sanad-mobile`) are built only against it:
 
-- [`docs/API.md`](docs/API.md) — the contract, v1.1.0 (single source of truth; clients carry verbatim copies)
+- [`docs/API.md`](docs/API.md) — the contract, v1.2.0 (single source of truth; clients carry verbatim copies)
 - [`docs/PLAN.md`](docs/PLAN.md) — scope, data model, security design, build order
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — why each library and pattern, with the trade-offs
+- [`docs/SECURITY.md`](docs/SECURITY.md) — threat model: threat → control → file → test, live-audit results, known limitations
 
 <!-- docs/screenshots/ will hold admin + mobile screenshots once the clients ship (Phase 3/4). -->
 
@@ -158,7 +159,9 @@ logic, controllers no business rules, and repositories are the only code that to
 
 ## Security
 
-Each control, where it lives:
+The full threat model — every control with its file, the test that proves it, live-audit results and
+known limitations — is in [`docs/SECURITY.md`](docs/SECURITY.md). Summary, each control and where it
+lives:
 
 - **Passwords**: argon2id (64 MiB / 3 passes), policy 10–128 chars, not equal to the email, not on a
   common-password list — `src/modules/auth/password.service.ts`

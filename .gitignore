@@ -12,8 +12,8 @@ build/
 *.tsbuildinfo
 
 # uploaded files (local storage driver)
-storage/
-uploads/
+/storage/
+/uploads/
 
 # tests / coverage
 coverage/

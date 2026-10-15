@@ -14,10 +14,16 @@ export type TicketEventType = (typeof EVENT_TYPES)[number];
 // docs/API.md §4.6: changes is keyed by field with before/after values.
 export type EventChanges = Record<string, { from: unknown; to: unknown }>;
 
+// A populated actor is serialised by the User schema's toJSON before this transform runs, so it
+// carries `id` rather than `_id`; a raw ObjectId stringifies to the hex id.
 function toActorRef(value: unknown): Record<string, unknown> {
   if (typeof value === 'object' && value !== null && 'name' in value) {
     const populated = value as Record<string, unknown>;
-    return { id: String(populated['_id']), name: populated['name'], role: populated['role'] };
+    return {
+      id: String(populated['id'] ?? populated['_id']),
+      name: populated['name'],
+      role: populated['role'],
+    };
   }
   return { id: String(value) };
 }

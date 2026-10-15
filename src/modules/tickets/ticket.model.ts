@@ -20,13 +20,18 @@ function idOf(value: unknown): string {
   return String(value);
 }
 
-// docs/API.md §4.1: UserRef = { id, name, role }. Value is either a populated user projection or a
-// raw ObjectId (read paths always populate; the fallback keeps an unpopulated doc from crashing).
+// docs/API.md §4.1: UserRef = { id, name, role }. By the time the parent transform runs, a
+// populated ref has already been serialised by ITS schema's toJSON (so it carries `id`, not `_id`);
+// the raw-ObjectId fallback keeps an unpopulated doc from crashing.
 function toUserRef(value: unknown): Record<string, unknown> | null {
   if (value === null || value === undefined) return null;
   if (typeof value === 'object' && 'name' in value) {
     const populated = value as Record<string, unknown>;
-    return { id: idOf(populated['_id']), name: populated['name'], role: populated['role'] };
+    return {
+      id: idOf(populated['id'] ?? populated['_id']),
+      name: populated['name'],
+      role: populated['role'],
+    };
   }
   return { id: idOf(value) };
 }
@@ -34,7 +39,7 @@ function toUserRef(value: unknown): Record<string, unknown> | null {
 function toCategoryRef(value: unknown): Record<string, unknown> {
   if (typeof value === 'object' && value !== null && 'name' in value) {
     const populated = value as Record<string, unknown>;
-    return { id: idOf(populated['_id']), name: populated['name'] };
+    return { id: idOf(populated['id'] ?? populated['_id']), name: populated['name'] };
   }
   return { id: idOf(value) };
 }

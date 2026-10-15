@@ -285,6 +285,67 @@ describe('PATCH /api/v1/admin/tickets/:id', () => {
   });
 });
 
+describe('lastActivityAt bumps on every mutation (contract 1.2.0 §5)', () => {
+  async function lastActivityOf(id: string): Promise<number> {
+    const doc = await TicketModel.findById(id).exec();
+    return doc?.lastActivityAt.getTime() ?? Number.NaN;
+  }
+
+  it('moves on requester edits and every kind of admin patch', async () => {
+    const ticket = body<Envelope<TicketBody>>(await createTicket(tokenA)).data;
+    let before = await lastActivityOf(ticket.id);
+
+    // Requester edit.
+    await request(app)
+      .patch(`/api/v1/tickets/${ticket.id}`)
+      .set('Authorization', `Bearer ${tokenA}`)
+      .send({ title: 'Edited for activity' })
+      .expect(200);
+    let after = await lastActivityOf(ticket.id);
+    expect(after).toBeGreaterThan(before);
+    before = after;
+
+    // Admin patch: priority.
+    await request(app)
+      .patch(`${ADMIN_TICKETS}/${ticket.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ priority: 'urgent' })
+      .expect(200);
+    after = await lastActivityOf(ticket.id);
+    expect(after).toBeGreaterThan(before);
+    before = after;
+
+    // Admin patch: assignee.
+    await request(app)
+      .patch(`${ADMIN_TICKETS}/${ticket.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ assigneeId: admin.id })
+      .expect(200);
+    after = await lastActivityOf(ticket.id);
+    expect(after).toBeGreaterThan(before);
+    before = after;
+
+    // Admin patch: category.
+    const other = await CategoryModel.create({ name: 'Technical' });
+    await request(app)
+      .patch(`${ADMIN_TICKETS}/${ticket.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ categoryId: other._id.toString() })
+      .expect(200);
+    after = await lastActivityOf(ticket.id);
+    expect(after).toBeGreaterThan(before);
+    before = after;
+
+    // A no-op patch (same values) writes no event and moves nothing.
+    await request(app)
+      .patch(`${ADMIN_TICKETS}/${ticket.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ priority: 'urgent' })
+      .expect(200);
+    expect(await lastActivityOf(ticket.id)).toBe(before);
+  });
+});
+
 describe('PATCH /api/v1/tickets/:id (owner edit)', () => {
   it('edits title/description while open, 409 TICKET_NOT_EDITABLE otherwise', async () => {
     const ticket = body<Envelope<TicketBody>>(await createTicket(tokenA)).data;

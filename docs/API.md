@@ -3,7 +3,7 @@
 Owner: `sanad-server`. Copies in `sanad-admin/docs/API.md` and `sanad-mobile/docs/API.md` must be
 byte-identical to this file; the server's copy wins on any difference.
 
-Contract version: **1.1.0** (frozen; later changes are additive and bump the minor).
+Contract version: **1.2.0** (frozen; later changes are additive and bump the minor).
 
 - Base URL: `http://localhost:4000` (dev) · prefix `/api/v1`
 - Content type: `application/json; charset=utf-8` for all bodies except uploads (`multipart/form-data`)
@@ -152,8 +152,11 @@ Users never receive comments with `isInternal: true`.
   "changes": { "status": { "from": "open", "to": "in_progress" } }, "createdAt": "…" }
 ```
 `type`: `"created" | "status_changed" | "priority_changed" | "assigned" | "updated" | "comment_added" | "attachment_added"`.
-`changes` is an object keyed by field; `assigned` uses `{ "assigneeId": { "from": null, "to": "…" } }`;
-`comment_added` / `attachment_added` carry `{ "commentId" | "attachmentId": { "from": null, "to": "…" } }`.
+`changes` is an object keyed by field; `created` carries `{ "status": { "from": null, "to": "open" } }`;
+`assigned` uses `{ "assigneeId": { "from": null, "to": "…" } }` (raw ids — events are immutable facts,
+clients resolve names and show "former admin" when an id no longer resolves);
+`comment_added` / `attachment_added` carry `{ "commentId" | "attachmentId": { "from": null, "to": "…" } }`;
+`updated` carries each changed field with its before/after text.
 
 ## 5. Status machine
 
@@ -170,8 +173,10 @@ Users never receive comments with `isInternal: true`.
 | closed | open | ✓ | ✓ only within 7 days of `closedAt` |
 
 Anything else → `409 TICKET_INVALID_TRANSITION`. While `closed`: comments, attachments and edits →
-`409 TICKET_CLOSED`. `resolvedAt` is set when entering `resolved`, `closedAt` when entering `closed`;
-both reset to `null` on reopen.
+`409 TICKET_CLOSED`. `resolvedAt` is set when entering `resolved`; it is kept on `resolved → closed`
+and cleared on `resolved → in_progress` or `resolved → open` (the ticket is no longer resolved).
+`closedAt` is set when entering `closed` and cleared on reopen (`closed → open`), together with `resolvedAt`. `lastActivityAt` is bumped by **every** mutation of the ticket or its
+children: status change, requester edit, admin patch, comment, attachment.
 
 ## 6. Pagination, filtering, sorting
 
@@ -233,14 +238,17 @@ Response `200`: `{ "data": Category }` · Errors: `VALIDATION_FAILED`, `NOT_FOUN
 Soft delete. Response `204` · Errors: `NOT_FOUND`, `CATEGORY_IN_USE` (any ticket, any status, references it)
 
 #### `GET /admin/categories` — admin
-Same as `GET /categories` plus `ticketCount` per category and `?includeDeleted=true` to list deleted ones (`deletedAt` set).
+Same as `GET /categories` plus `ticketCount` per category and `?includeDeleted=true` to list deleted ones.
+`deletedAt` is always present on this route (`null` for active categories).
 Response `200`: `{ "data": [ Category & { "ticketCount": number, "deletedAt": string | null } ] }`
 
 ### 7.3 Tickets — user-facing (ownership-scoped)
 
 #### `POST /tickets` — user
 Request: `{ "title": string(3–120), "description": string(1–5000), "categoryId": ObjectId, "priority"?: Priority (default "medium") }`
-Response `201`: `{ "data": Ticket }` · Errors: `VALIDATION_FAILED`, `CATEGORY_UNAVAILABLE`
+Response `201`: `{ "data": Ticket }` · Errors: `VALIDATION_FAILED`, `CATEGORY_UNAVAILABLE` (a well-formed
+`categoryId` that is deleted **or does not exist** — the two are not distinguished, so category ids
+cannot be enumerated)
 
 #### `GET /tickets` — user
 Own tickets. Query: pagination/sort (§6) + `status?`, `priority?`.
@@ -315,7 +323,7 @@ Request: `{ "status": Status }` — admin column of §5.
 Response `200`: `{ "data": Ticket }` · Errors: `VALIDATION_FAILED`, `NOT_FOUND`, `TICKET_INVALID_TRANSITION`
 
 #### `GET /admin/tickets/:id/comments`
-Includes internal comments. Query: `page`, `limit`.
+Includes internal comments. Query: `page`, `limit`. Oldest first, like the owner route.
 Response `200`: `{ "data": [ Comment ], "meta": … }` · Errors: `NOT_FOUND`
 
 #### `POST /admin/tickets/:id/comments`
@@ -351,6 +359,10 @@ Response `503`: `{ "data": { "status": "degraded", "uptime": 123.4, "db": "disco
 
 ## 9. Changelog
 
+- 1.2.0 — clarifications from Phase 2/3b review, no wire changes: `created` and `updated` event
+  payloads pinned; `resolvedAt` cleared when work restarts; `lastActivityAt` bumped by every
+  mutation; unknown `categoryId` → `CATEGORY_UNAVAILABLE`; `deletedAt` always present on the admin
+  category listing; admin comments oldest-first.
 - 1.1.0 — pre-freeze clarifications from Phase 1 review: logout needs only the refresh token;
   login/register share one 10/15 min counter and refresh/logout get a separate 60/15 min counter;
   health 503 body defined; `Cache-Control: no-store` documented; `TicketListItem` defined precisely;

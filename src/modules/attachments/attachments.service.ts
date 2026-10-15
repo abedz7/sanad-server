@@ -31,7 +31,10 @@ export interface UploadedFile {
 
 // Strip any path the client sent, drop control characters, cap at 200 (schema limit).
 function sanitiseOriginalName(raw: string): string {
-  const basename = raw.split(/[/\\]/).pop() ?? '';
+  // busboy decodes multipart header params as latin1; recover the UTF-8 the client actually sent
+  // (RFC 7578 clients send UTF-8 filenames).
+  const decoded = Buffer.from(raw, 'latin1').toString('utf8');
+  const basename = decoded.split(/[/\\]/).pop() ?? '';
   // eslint-disable-next-line no-control-regex -- removing control chars is the point here
   const cleaned = basename.replace(/[\u0000-\u001f\u007f]/g, '').trim();
   return (cleaned || 'file').slice(0, 200);
@@ -104,6 +107,8 @@ export const attachmentsService = {
       throw err;
     }
 
+    // Populate so the response carries uploadedBy as a UserRef (docs/API.md §4.4).
+    await ticketsRepository.populate(ticket);
     const attachment = ticket.attachments[ticket.attachments.length - 1];
     if (!attachment) throw new AppError('INTERNAL'); // unreachable: just pushed
     try {

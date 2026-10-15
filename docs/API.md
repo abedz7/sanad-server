@@ -3,7 +3,7 @@
 Owner: `sanad-server`. Copies in `sanad-admin/docs/API.md` and `sanad-mobile/docs/API.md` must be
 byte-identical to this file; the server's copy wins on any difference.
 
-Contract version: **1.0.0** (frozen at end of Phase 1; later changes are additive and bump the minor).
+Contract version: **1.1.0** (frozen; later changes are additive and bump the minor).
 
 - Base URL: `http://localhost:4000` (dev) · prefix `/api/v1`
 - Content type: `application/json; charset=utf-8` for all bodies except uploads (`multipart/form-data`)
@@ -65,7 +65,7 @@ Clients may rely on `code`; `message` is for humans and may change.
 | Token | Format | Lifetime | Web (admin) | Mobile |
 |---|---|---|---|---|
 | Access | JWT (HS256), claims `sub`, `role`, `jti`, `iat`, `exp` | 15 min | response body → kept in memory | response body → kept in memory |
-| Refresh | opaque 43-char base64url string | 30 days, rotated on every use | `httpOnly; SameSite=Strict; Path=/api/v1/auth/refresh` cookie `sanad_rt` — never in body | response body → `expo-secure-store` |
+| Refresh | opaque 43-char base64url string | 30 days by default (`REFRESH_TOKEN_TTL_DAYS`), rotated on every use | `httpOnly; SameSite=Strict; Path=/api/v1/auth/refresh` cookie `sanad_rt` — never in body | response body → `expo-secure-store` |
 
 Send the access token as `Authorization: Bearer <token>` on every protected route.
 Rotation: each `/auth/refresh` call invalidates the presented refresh token and returns a new one.
@@ -76,7 +76,8 @@ client must sign in again.
 
 | Scope | Limit |
 |---|---|
-| `/auth/login`, `/auth/register`, `/auth/refresh` per IP | 10 requests / 15 min |
+| `/auth/login` + `/auth/register` per IP | 10 requests / 15 min, **one shared counter** for both routes |
+| `/auth/refresh` + `/auth/logout` per IP | 60 requests / 15 min, one shared counter (a foregrounded app refreshes often; the token itself is the credential) |
 | Account lockout | 5 failed logins → locked 15 min (response is still `AUTH_INVALID_CREDENTIALS`) |
 | All routes per IP | 300 / 15 min |
 | Mutating routes (`POST`/`PATCH`/`DELETE`) per authenticated user | 60 / 15 min |
@@ -125,7 +126,9 @@ Deleted categories are not listed but may still appear as `category` on old tick
 }
 ```
 `priority`: `"low" | "medium" | "high" | "urgent"` · `status`: `"open" | "in_progress" | "resolved" | "closed"`.
-List endpoints return the same shape minus `description` and `attachments` (use `attachmentCount`).
+`TicketListItem` (returned by list endpoints) is `Ticket` **minus** `description` and `attachments`,
+**plus** `attachmentCount: number`. `commentCount`, `category`, `requester`, `assignee` and all
+timestamps are kept.
 
 ### 4.4 Attachment (metadata only)
 
@@ -187,7 +190,7 @@ ticket; admins are not owners on these routes) · `admin`.
 #### `POST /auth/register` — public
 Request: `{ "email": string(≤254), "password": string, "name": string(1–80) }`
 Response `201`: `{ "data": { "user": User, "accessToken": string, "refreshToken": string } }`
-(registration implies `client: "mobile"`; admins are never created here)
+(registration implies `client: "mobile"` and is handled by clients exactly like a mobile login; admins are never created here)
 Errors: `VALIDATION_FAILED`, `CONFLICT` (email in use), `RATE_LIMITED`
 
 #### `POST /auth/login` — public
@@ -202,9 +205,12 @@ Request: web → no body, cookie `sanad_rt`; mobile → `{ "refreshToken": strin
 Response `200`: same shape as login for that client (new access token; new refresh token in cookie or body)
 Errors: `AUTH_REFRESH_INVALID`, `RATE_LIMITED`
 
-#### `POST /auth/logout` — user
+#### `POST /auth/logout` — public (needs a refresh token, **not** an access token)
 Request: web → cookie `sanad_rt`; mobile → `{ "refreshToken": string }`. Revokes that token's whole family.
-Response `204`. Cookie cleared on web. Idempotent: an unknown or already-revoked token still returns `204`.
+Possession of the refresh token is the credential, so a client whose 15-minute access token has
+already expired can still end its session server-side. Rate-limited with `/auth/refresh`.
+Response `204`. Cookie cleared on web. Idempotent: a missing, unknown or already-revoked token still
+returns `204` (no enumeration).
 
 #### `GET /auth/me` — user
 Response `200`: `{ "data": User }`
@@ -330,7 +336,7 @@ Response `200`: `{ "data": [ User ], "meta": … }`
 
 #### `GET /health` — public (outside `/api/v1`)
 Response `200`: `{ "data": { "status": "ok", "uptime": 123.4, "db": "connected" } }`
-`503` with `db: "disconnected"` when Mongo is unreachable.
+Response `503`: `{ "data": { "status": "degraded", "uptime": 123.4, "db": "disconnected" } }` when Mongo is unreachable.
 
 ## 8. Headers
 
@@ -340,7 +346,13 @@ Response `200`: `{ "data": { "status": "ok", "uptime": 123.4, "db": "connected" 
 | `X-Request-Id` | both | echoed or generated |
 | `Retry-After` | response | on 429, seconds |
 | `Set-Cookie: sanad_rt` | response | web login/refresh only |
+| `Cache-Control: no-store` | response | every `/auth/*` response and every attachment download |
+| `X-Content-Type-Options: nosniff` | response | all responses (helmet); attachment downloads rely on it |
 
 ## 9. Changelog
 
+- 1.1.0 — pre-freeze clarifications from Phase 1 review: logout needs only the refresh token;
+  login/register share one 10/15 min counter and refresh/logout get a separate 60/15 min counter;
+  health 503 body defined; `Cache-Control: no-store` documented; `TicketListItem` defined precisely;
+  refresh lifetime stated as a default; `TICKET_NOT_EDITABLE` error code.
 - 1.0.0 — initial contract.

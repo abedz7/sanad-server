@@ -140,6 +140,26 @@ describe('cross-cutting security invariants', () => {
     }
   });
 
+  it('the local storage adapter rejects any key that is not a plain filename', async () => {
+    const { LocalDiskStorage } =
+      await import('../src/modules/attachments/storage/LocalDiskStorage.js');
+    const storage = new LocalDiskStorage(tmpdir());
+    for (const hostile of [
+      '../etc/passwd',
+      'a/../../b',
+      '/etc/passwd',
+      '.hidden',
+      'a/b.png',
+      'a\\b.png',
+      'x..y.png',
+    ]) {
+      await expect(storage.getStream(hostile)).rejects.toThrow('invalid storage key');
+      await expect(storage.put(hostile, Buffer.from('x'), 'image/png')).rejects.toThrow(
+        'invalid storage key',
+      );
+    }
+  });
+
   it('a login failure response carries no stack in any environment', async () => {
     const res = await request(app)
       .post('/api/v1/auth/login')

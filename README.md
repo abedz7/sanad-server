@@ -11,8 +11,6 @@ This repository owns the API contract. The admin dashboard (`sanad-admin`) and t
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — why each library and pattern, with the trade-offs
 - [`docs/SECURITY.md`](docs/SECURITY.md) — threat model: threat → control → file → test, live-audit results, known limitations
 
-<!-- docs/screenshots/ will hold admin + mobile screenshots once the clients ship (Phase 3/4). -->
-
 ## Prerequisites
 
 - **Node.js 22** (`.nvmrc` provided — `nvm use`)

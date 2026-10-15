@@ -6,7 +6,7 @@ Mongoose 8 · MongoDB 7.
 This repository owns the API contract. The admin dashboard (`sanad-admin`) and the mobile app
 (`sanad-mobile`) are built only against it:
 
-- [`docs/API.md`](docs/API.md) — the contract, v1.2.0 (single source of truth; clients carry verbatim copies)
+- [`docs/API.md`](docs/API.md) — the contract, v1.3.0 (single source of truth; clients carry verbatim copies)
 - [`docs/PLAN.md`](docs/PLAN.md) — scope, data model, security design, build order
 - [`docs/DECISIONS.md`](docs/DECISIONS.md) — why each library and pattern, with the trade-offs
 - [`docs/SECURITY.md`](docs/SECURITY.md) — threat model: threat → control → file → test, live-audit results, known limitations
@@ -63,7 +63,7 @@ Base path `/api/v1`; `GET /health` sits outside it.
 
 | Area       | Endpoints                                                                                                                                                                                                                                                                    |
 | ---------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Auth       | `POST /auth/register` · `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me`                                                                                                                                                                     |
+| Auth       | `POST /auth/register` · `POST /auth/login` · `POST /auth/refresh` · `POST /auth/logout` · `GET /auth/me` · `PATCH /auth/me`                                                                                                                                                  |
 | Categories | `GET /categories` (user) · `GET/POST /admin/categories` · `PATCH/DELETE /admin/categories/:id`                                                                                                                                                                               |
 | Tickets    | `POST/GET /tickets` · `GET/PATCH /tickets/:id` · `POST /tickets/:id/status` · `GET/POST /tickets/:id/comments` · `GET /tickets/:id/history` · `POST /tickets/:id/attachments` · `GET /tickets/:id/attachments/:attachmentId/download`                                        |
 | Admin      | `GET /admin/stats` · `GET /admin/tickets` · `GET/PATCH /admin/tickets/:id` · `POST /admin/tickets/:id/status` · `GET/POST /admin/tickets/:id/comments` · `GET /admin/tickets/:id/history` · `GET /admin/tickets/:id/attachments/:attachmentId/download` · `GET /admin/users` |

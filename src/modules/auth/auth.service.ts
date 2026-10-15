@@ -154,4 +154,12 @@ export const authService = {
     if (!user || user.deletedAt) throw new AppError('AUTH_REQUIRED');
     return user;
   },
+
+  // docs/API.md 1.3.0 §7.1: display name only. The repository method accepts exactly one string,
+  // so email/role/password can never travel through this path.
+  async updateMe(userId: string, name: string): Promise<UserDocument> {
+    const user = await userRepository.updateName(userId, name);
+    if (!user) throw new AppError('AUTH_REQUIRED');
+    return user;
+  },
 };

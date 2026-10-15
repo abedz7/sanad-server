@@ -2,7 +2,13 @@ import type { CookieOptions, Request, RequestHandler, Response } from 'express';
 import { env } from '../../config/env.js';
 import { ok } from '../../lib/response.js';
 import { validated } from '../../middleware/validate.js';
-import { loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth.schemas.js';
+import {
+  loginSchema,
+  logoutSchema,
+  refreshSchema,
+  registerSchema,
+  updateMeSchema,
+} from './auth.schemas.js';
 import { authService, type AuthResult, type RequestContext } from './auth.service.js';
 
 export const REFRESH_COOKIE = 'sanad_rt';
@@ -75,5 +81,10 @@ export const authController = {
 
   me: (async (req, res) => {
     ok(res, await authService.me(req.user?.id ?? ''));
+  }) satisfies RequestHandler,
+
+  updateMe: (async (req, res) => {
+    const { body } = validated(req, updateMeSchema);
+    ok(res, await authService.updateMe(req.user?.id ?? '', body.name));
   }) satisfies RequestHandler,
 };

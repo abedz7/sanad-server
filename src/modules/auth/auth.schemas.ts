@@ -23,3 +23,9 @@ export const refreshSchema = {
 };
 
 export const logoutSchema = refreshSchema;
+
+// docs/API.md §7.1 PATCH /auth/me — name only. Email is the login identity (immutable without
+// verification); role and password have their own controlled paths. Strict, so nothing else rides along.
+export const updateMeSchema = {
+  body: z.object({ name: z.string().trim().min(1).max(80) }).strict(),
+};

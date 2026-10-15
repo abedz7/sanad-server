@@ -1,9 +1,19 @@
 import { Router } from 'express';
 import { requireAuth } from '../../middleware/auth.js';
-import { loginRegisterLimiter, refreshLogoutLimiter } from '../../middleware/rateLimit.js';
+import {
+  loginRegisterLimiter,
+  mutatingLimiter,
+  refreshLogoutLimiter,
+} from '../../middleware/rateLimit.js';
 import { validate } from '../../middleware/validate.js';
 import { authController } from './auth.controller.js';
-import { loginSchema, logoutSchema, refreshSchema, registerSchema } from './auth.schemas.js';
+import {
+  loginSchema,
+  logoutSchema,
+  refreshSchema,
+  registerSchema,
+  updateMeSchema,
+} from './auth.schemas.js';
 
 export const authRouter = Router();
 
@@ -25,3 +35,11 @@ authRouter.post('/refresh', refreshLogoutLimiter, validate(refreshSchema), authC
 // whose access token already expired can still end its session server-side.
 authRouter.post('/logout', refreshLogoutLimiter, validate(logoutSchema), authController.logout);
 authRouter.get('/me', requireAuth, authController.me);
+// Rate-limited with the other per-user mutating routes (docs/API.md §7.1).
+authRouter.patch(
+  '/me',
+  requireAuth,
+  mutatingLimiter,
+  validate(updateMeSchema),
+  authController.updateMe,
+);

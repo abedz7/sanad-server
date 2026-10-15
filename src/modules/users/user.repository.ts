@@ -62,6 +62,16 @@ export const userRepository = {
     ]).exec();
   },
 
+  // Profile self-service may change the display name and nothing else — the $set is built here,
+  // from one string, so no caller can widen it to role/email/passwordHash.
+  updateName(id: string, name: string): Promise<UserDocument | null> {
+    return UserModel.findOneAndUpdate(
+      { _id: id, deletedAt: null },
+      { $set: { name } },
+      { new: true, runValidators: true },
+    ).exec();
+  },
+
   async resetLoginState(id: string): Promise<void> {
     await UserModel.updateOne(
       { _id: id },

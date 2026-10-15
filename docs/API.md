@@ -3,7 +3,7 @@
 Owner: `sanad-server`. Copies in `sanad-admin/docs/API.md` and `sanad-mobile/docs/API.md` must be
 byte-identical to this file; the server's copy wins on any difference.
 
-Contract version: **1.2.0** (frozen; later changes are additive and bump the minor).
+Contract version: **1.3.0** (frozen; later changes are additive and bump the minor).
 
 - Base URL: `http://localhost:4000` (dev) · prefix `/api/v1`
 - Content type: `application/json; charset=utf-8` for all bodies except uploads (`multipart/form-data`)
@@ -220,6 +220,12 @@ returns `204` (no enumeration).
 #### `GET /auth/me` — user
 Response `200`: `{ "data": User }`
 
+#### `PATCH /auth/me` — user
+Request: `{ "name": string(1–80) }` (strict; `email` is not editable — it is the login identity and
+changing it would need verification).
+Response `200`: `{ "data": User }`
+Errors: `VALIDATION_FAILED`, `AUTH_REQUIRED`. Rate-limited with mutating routes.
+
 ### 7.2 Categories
 
 #### `GET /categories` — user
@@ -359,6 +365,7 @@ Response `503`: `{ "data": { "status": "degraded", "uptime": 123.4, "db": "disco
 
 ## 9. Changelog
 
+- 1.3.0 — additive: `PATCH /auth/me` to update the display name (`name` only; email stays immutable).
 - 1.2.0 — clarifications from Phase 2/3b review, no wire changes: `created` and `updated` event
   payloads pinned; `resolvedAt` cleared when work restarts; `lastActivityAt` bumped by every
   mutation; unknown `categoryId` → `CATEGORY_UNAVAILABLE`; `deletedAt` always present on the admin
